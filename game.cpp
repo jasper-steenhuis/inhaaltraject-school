@@ -17,7 +17,7 @@
 #define MAX_FRAMES 2000
 
 //Global performance timer
-#define REF_PERFORMANCE 73466 //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames)
+#define REF_PERFORMANCE 60395.2  //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames)
 static timer perf_timer;
 static float duration;
 
@@ -89,38 +89,75 @@ void Game::shutdown()
 {
 }
 
-// -----------------------------------------------------------
-// Iterates through all tanks and returns the closest enemy tank for the given tank
-// -----------------------------------------------------------
-Tank& Game::find_closest_enemy(Tank& current_tank)
+void Tmpl8::Game::updateExplosions()
 {
-    float closest_distance = numeric_limits<float>::infinity();
-    int closest_index = 0;
-
-    for (int i = 0; i < tanks.size(); i++)
+    //Update explosion sprites and remove when done with remove erase idiom
+    for (Explosion& explosion : explosions)
     {
-        if (tanks.at(i).allignment != current_tank.allignment && tanks.at(i).active)
+        explosion.tick();
+    }
+
+    explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](const Explosion& explosion) { return explosion.done(); }), explosions.end());
+
+}
+void Tmpl8::Game::updateSmokes()
+{
+    //Update smoke plumes
+    for (Smoke& smoke : smokes)
+    {
+        smoke.tick();
+    }
+}
+void Tmpl8::Game::updateRockets()
+{
+    //Update rockets
+    for (Rocket& rocket : rockets)
+    {
+        rocket.tick();
+
+        //Check if rocket collides with enemy tank, spawn explosion and if tank is destroyed spawn a smoke plume
+        for (Tank& tank : tanks)
         {
-            float sqr_dist = fabsf((tanks.at(i).get_position() - current_tank.get_position()).sqr_length());
-            if (sqr_dist < closest_distance)
+            if (tank.active && (tank.allignment != rocket.allignment) && rocket.intersects(tank.position, tank.collision_radius))
             {
-                closest_distance = sqr_dist;
-                closest_index = i;
+                explosions.push_back(Explosion(&explosion, tank.position));
+
+                if (tank.hit(ROCKET_HIT_VALUE))
+                {
+                    smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));
+                }
+
+                rocket.active = false;
+                break;
             }
         }
     }
 
-    return tanks.at(closest_index);
-}
+    //Remove exploded rockets with remove erase idiom
+    rockets.erase(std::remove_if(rockets.begin(), rockets.end(), [](const Rocket& rocket) { return !rocket.active; }), rockets.end());
 
-// -----------------------------------------------------------
-// Update the game state:
-// Move all objects
-// Update sprite frames
-// Collision detection
-// Targeting etc..
-// -----------------------------------------------------------
-void Game::update(float deltaTime)
+}
+void Tmpl8::Game::updateParticleBeams()
+{
+    //Update particle beams
+    for (Particle_beam& particle_beam : particle_beams)
+    {
+        particle_beam.tick(tanks);
+
+        //Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
+        for (Tank& tank : tanks)
+        {
+            if (tank.active && particle_beam.rectangle.intersects_circle(tank.get_position(), tank.get_collision_radius()))
+            {
+                if (tank.hit(particle_beam.damage))
+                {
+                    smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));
+                }
+            }
+        }
+    }
+}
+void Tmpl8::Game::updateTanks()
 {
     //Update tanks
     for (Tank& tank : tanks)
@@ -131,7 +168,7 @@ void Game::update(float deltaTime)
             for (Tank& o_tank : tanks)
             {
                 if (&tank == &o_tank) continue;
-                
+
                 vec2 dir = tank.get_position() - o_tank.get_position();
                 float dir_squared_len = dir.sqr_length();
 
@@ -159,63 +196,47 @@ void Game::update(float deltaTime)
         }
     }
 
-    //Update smoke plumes
-    for (Smoke& smoke : smokes)
-    {
-        smoke.tick();
-    }
+}
 
-    //Update rockets
-    for (Rocket& rocket : rockets)
-    {
-        rocket.tick();
 
-        //Check if rocket collides with enemy tank, spawn explosion and if tank is destroyed spawn a smoke plume
-        for (Tank& tank : tanks)
+// -----------------------------------------------------------
+// Iterates through all tanks and returns the closest enemy tank for the given tank
+// -----------------------------------------------------------
+Tank& Game::find_closest_enemy(Tank& current_tank)
+{
+    float closest_distance = numeric_limits<float>::infinity();
+    int closest_index = 0;
+
+    for (int i = tanks.size() -1; i > 0; i--)
+    {
+        if (tanks.at(i).allignment != current_tank.allignment && tanks.at(i).active)
         {
-            if (tank.active && (tank.allignment != rocket.allignment) && rocket.intersects(tank.position, tank.collision_radius))
+            float sqr_dist = fabsf((tanks.at(i).get_position() - current_tank.get_position()).sqr_length());
+            if (sqr_dist < closest_distance)
             {
-                explosions.push_back(Explosion(&explosion, tank.position));
-
-                if (tank.hit(ROCKET_HIT_VALUE))
-                {
-                    smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));
-                }
-
-                rocket.active = false;
-                break;
+                closest_distance = sqr_dist;
+                closest_index = i;
             }
         }
     }
 
-    //Remove exploded rockets with remove erase idiom
-    rockets.erase(std::remove_if(rockets.begin(), rockets.end(), [](const Rocket& rocket) { return !rocket.active; }), rockets.end());
+    return tanks.at(closest_index);
+}
 
-    //Update particle beams
-    for (Particle_beam& particle_beam : particle_beams)
-    {
-        particle_beam.tick(tanks);
-
-        //Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
-        for (Tank& tank : tanks)
-        {
-            if (tank.active && particle_beam.rectangle.intersects_circle(tank.get_position(), tank.get_collision_radius()))
-            {
-                if (tank.hit(particle_beam.damage))
-                {
-                    smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));
-                }
-            }
-        }
-    }
-
-    //Update explosion sprites and remove when done with remove erase idiom
-    for (Explosion& explosion : explosions)
-    {
-        explosion.tick();
-    }
-
-    explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](const Explosion& explosion) { return explosion.done(); }), explosions.end());
+// -----------------------------------------------------------
+// Update the game state:
+// Move all objects
+// Update sprite frames
+// Collision detection
+// Targeting etc..
+// -----------------------------------------------------------
+void Game::update(float deltaTime)
+{
+    updateTanks();
+    updateRockets();
+    updateSmokes();
+    updateParticleBeams();
+    updateExplosions();
 }
 
 void Game::draw()
@@ -311,6 +332,42 @@ void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original,
     }
 }
 
+void Tmpl8::Game::mergeSort(std::vector<Tank>& left, std::vector<Tank>& right, std::vector<Tank>& results)
+{
+    int nL = left.size();
+    int nR = right.size();
+
+    auto leftLoop   = 0;
+    auto rightLoop  = 0;
+    auto resultLoop = 0;
+
+    results.at(resultLoop) =  (left.at(leftLoop) <= right.at(rightLoop))
+
+}
+
+void Tmpl8::Game::merge(std::vector<Tank>& original)
+{
+    if (original.size() <= 1) {
+        return;
+    }
+    int mid = original.size() / 2;
+
+    std::vector<Tank> left;
+    std::vector<Tank> right;
+
+    left.reserve(mid);
+    right.reserve(original.size() - mid);
+
+    std::copy(std::begin(original), std::begin(original) + mid, std::back_inserter(left));
+    std::copy(std::begin(original) + mid, std::end(original), std::back_inserter(right));
+
+    merge(left);
+    merge(right);
+    mergeSort(left, right, original);
+    
+
+}
+
 // -----------------------------------------------------------
 // When we reach MAX_FRAMES print the duration and speedup multiplier
 // Updating REF_PERFORMANCE at the top of this file with the value
@@ -341,6 +398,7 @@ void Tmpl8::Game::measure_performance()
         frame_count_font->centre(screen, buffer, 340);
     }
 }
+
 
 // -----------------------------------------------------------
 // Main application tick function
