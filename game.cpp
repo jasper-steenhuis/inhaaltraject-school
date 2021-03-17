@@ -285,8 +285,8 @@ void Game::draw()
 
         const int begin = ((t < 1) ? 0 : NUM_TANKS_BLUE);
         std::vector<const Tank*> sorted_tanks;
-        insertion_sort_tanks_health(tanks, sorted_tanks, begin, begin + NUM_TANKS);
-
+        //insertion_sort_tanks_health(tanks, sorted_tanks, begin, begin + NUM_TANKS);
+        mergeSort(tanks, sorted_tanks, begin, begin + NUM_TANKS);
         for (int i = 0; i < NUM_TANKS; i++)
         {
             int health_bar_start_x = i * (HEALTH_BAR_WIDTH + HEALTH_BAR_SPACING) + HEALTH_BARS_OFFSET_X;
@@ -332,39 +332,86 @@ void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original,
     }
 }
 
-void Tmpl8::Game::mergeSort(std::vector<Tank>& left, std::vector<Tank>& right, std::vector<Tank>& results)
+void Tmpl8::Game::mergeSort(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end)
 {
-    int nL = left.size();
-    int nR = right.size();
+    if (sorted_tanks.empty()) {
+        const int NUM_TANKS = end - begin;
+        sorted_tanks.reserve(NUM_TANKS);
+        sorted_tanks.emplace_back(&original.at(begin));
+    }
+    
 
-    auto leftLoop   = 0;
-    auto rightLoop  = 0;
-    auto resultLoop = 0;
-
-    results.at(resultLoop) =  (left.at(leftLoop) <= right.at(rightLoop))
-
-}
-
-void Tmpl8::Game::merge(std::vector<Tank>& original)
-{
-    if (original.size() <= 1) {
+    
+    if (original.size() <= 1) 
+    {
         return;
     }
-    int mid = original.size() / 2;
 
+    int mid = sorted_tanks.size() / 2;
     std::vector<Tank> left;
     std::vector<Tank> right;
-
-    left.reserve(mid);
-    right.reserve(original.size() - mid);
-
-    std::copy(std::begin(original), std::begin(original) + mid, std::back_inserter(left));
-    std::copy(std::begin(original) + mid, std::end(original), std::back_inserter(right));
-
-    merge(left);
-    merge(right);
-    mergeSort(left, right, original);
+    std::vector<const Tank*> left_ptr;
+    std::vector<const Tank*> right_ptr;
     
+
+    left_ptr.reserve(left.size());
+
+    right_ptr.reserve(right.size());
+
+
+    for (size_t j = ((int)begin); j < mid; j++) 
+    {
+
+        left_ptr.emplace_back(sorted_tanks.at(j));
+    }
+    for (size_t j = ((int)begin); j < (sorted_tanks.size() - 1) - mid; j++) 
+    {
+        right_ptr.emplace_back(sorted_tanks.at(mid + j));
+    }
+    std::cout << "vectors" << std::endl;
+    std::cout << &left << std::endl;
+    
+
+
+
+    mergeSort(left,sorted_tanks,begin,end);
+    mergeSort(right,sorted_tanks,begin,end);
+    merge(left_ptr, right_ptr, sorted_tanks, begin, end);
+  
+}
+
+void Tmpl8::Game::merge(std::vector<const Tank*>& left, std::vector<const Tank*>& right, std::vector<const Tank*>& sorted_tanks, int begin, int end)
+{
+    int nL = left.size() - 1;
+    int nR = right.size() - 1;
+    int i = (int)begin + 1;
+    int j = (int)begin + 1;
+    int k = (int)begin + 1;
+    
+    while (j < nL && k < nR)
+    {
+        if (left[j]->health <= right[k]->health) 
+        {
+            sorted_tanks[i] = left[j];
+            j++;
+        }
+        else
+        {
+            sorted_tanks[i] = right[k];
+            k++;
+        }
+        i++;
+    }
+    while (j < nL) {
+        sorted_tanks[i] = left[j];
+        j++;
+        i++;
+    }
+    while (k < nR) {
+        sorted_tanks[i] = right[k];
+        k++;
+        i++;
+    }
 
 }
 
