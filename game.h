@@ -19,8 +19,8 @@ class Game
     void tick(float deltaTime);
     void insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end);
     
-    void mergeSort(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end);
-    void merge(std::vector<const Tank*>& left, std::vector<const Tank*>& right, std::vector<const Tank*>& sorted_tanks, int begin, int end);
+    void mergeSort(std::vector<int>& original);
+    std::vector<int> merge(std::vector<int>& left, std::vector<int>& right);
     void measure_performance();
     void updateTanks();
     void updateExplosions();
@@ -54,6 +54,7 @@ class Game
     Surface* screen;
 
     vector<Tank> tanks;
+    vector<int> tanks_health;
     vector<Rocket> rockets;
     vector<Smoke> smokes;
     vector<Explosion> explosions;

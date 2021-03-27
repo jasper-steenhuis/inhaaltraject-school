@@ -15,7 +15,6 @@
     <ProjectGuid>{D8FE2186-4BF0-4B89-913F-6C26818E5AC5}</ProjectGuid>
     <RootNamespace>Tmpl8</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
@@ -47,7 +46,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>lib\glew-2.1.0\include;lib\SDL2-2.0.10\include;lib\FreeImage\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\steen\source\repos\jasper-steenhuis\inhaaltraject-school\lib\glew-2.1.0\lib;lib\glew-2.1.0\include;lib\SDL2-2.0.10\include;lib\FreeImage\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
