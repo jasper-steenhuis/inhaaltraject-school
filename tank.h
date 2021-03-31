@@ -1,4 +1,5 @@
 #pragma once
+#include "grid.h"
 
 namespace Tmpl8
 {
@@ -11,8 +12,18 @@ enum allignments
 
 class Tank
 {
+    friend class Grid;
+
   public:
-    Tank(float pos_x, float pos_y, allignments allignment, Sprite* tank_sprite, Sprite* smoke_sprite, float tar_x, float tar_y, float collision_radius, int health, float max_speed);
+      Tank(float pos_x, float pos_y, allignments allignment, Sprite* tank_sprite, Sprite* smoke_sprite, float tar_x, float tar_y, float collision_radius, int health, float max_speed, Grid* grid)
+          : grid_(grid),
+          x_(pos_x),
+          y_(pos_y),
+          prev_(NULL),
+          next_(NULL)
+      {
+          grid_->add(this);
+      };
 
     ~Tank();
 
@@ -53,7 +64,12 @@ class Tank
     int current_frame;
     Sprite* tank_sprite;
     Sprite* smoke_sprite;
-
+private:
+    Grid* grid_;
+    float x_;
+    float y_;
+    Tank* prev_;
+    Tank* next_;
 };
 
 } // namespace Tmpl8

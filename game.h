@@ -16,11 +16,10 @@ class Game
     void shutdown();
     void update(float deltaTime);
     void draw();
-    void tick(float deltaTime);
-    void insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end);
-    
+    void tick(float deltaTime);    
     void mergeSort(std::vector<int>& original);
     std::vector<int> merge(std::vector<int>& left, std::vector<int>& right);
+    void gridUpdate();
     void measure_performance();
     void updateTanks();
     void updateExplosions();

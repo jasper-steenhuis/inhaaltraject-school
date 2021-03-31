@@ -1,5 +1,5 @@
 #include "precomp.h" // include (only) this in every .cpp file
-
+#include "thread_pool.h"
 #define NUM_TANKS_BLUE 1279
 #define NUM_TANKS_RED 1279
 
@@ -17,7 +17,7 @@
 #define MAX_FRAMES 2000
 
 //Global performance timer
-#define REF_PERFORMANCE 60395.2  //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames)
+#define REF_PERFORMANCE 59636.6   //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames)
 static timer perf_timer;
 static float duration;
 
@@ -45,6 +45,8 @@ const static vec2 rocket_size(25, 24);
 
 const static float tank_radius = 8.5f;
 const static float rocket_radius = 10.f;
+std::mutex m;
+
 
 // -----------------------------------------------------------
 // Initialize the application
@@ -54,7 +56,8 @@ void Game::init()
     frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
 
     tanks.reserve(NUM_TANKS_BLUE + NUM_TANKS_RED);
-    
+    tanks_health.reserve(NUM_TANKS_BLUE + NUM_TANKS_RED);
+   
    
     uint rows = (uint)sqrt(NUM_TANKS_BLUE + NUM_TANKS_RED);
     uint max_rows = 12;
@@ -67,6 +70,8 @@ void Game::init()
 
     float spacing = 15.0f;
 
+    
+
     //Spawn blue tanks
     for (int i = 0; i < NUM_TANKS_BLUE; i++)
     {
@@ -77,14 +82,12 @@ void Game::init()
     for (int i = 0; i < NUM_TANKS_RED; i++)
     {
         tanks.push_back(Tank(start_red_x + ((i % max_rows) * spacing), start_red_y + ((i / max_rows) * spacing), RED, &tank_red, &smoke, 80, 80, tank_radius, TANK_MAX_HEALTH, TANK_MAX_SPEED));
-    }
-    std::vector<int> ints = { 5,2,6,9,87,8,23,4,4,56,564,6,8,8,8,8,4,6,2,1,85,6,656,5,8,8,87,9,6,5489,46,54,684,6,57869,48,64,638,46,4268,24 };
-    
+    }    
     for (int i = 0; i < tanks.size(); i++)
     {
         tanks_health.push_back(tanks.at(i).health);
     }
-    
+    mergeSort(tanks_health);
     particle_beams.push_back(Particle_beam(vec2(SCRWIDTH / 2, SCRHEIGHT / 2), vec2(100, 50), &particle_beam_sprite, PARTICLE_BEAM_HIT_VALUE));
     particle_beams.push_back(Particle_beam(vec2(80, 80), vec2(100, 50), &particle_beam_sprite, PARTICLE_BEAM_HIT_VALUE));
     particle_beams.push_back(Particle_beam(vec2(1200, 600), vec2(100, 50), &particle_beam_sprite, PARTICLE_BEAM_HIT_VALUE));
@@ -182,11 +185,14 @@ void Tmpl8::Game::updateTanks()
 
                 float col_squared_len = (tank.get_collision_radius() + o_tank.get_collision_radius());
                 col_squared_len *= col_squared_len;
+                
 
                 if (dir_squared_len < col_squared_len)
                 {
                     tank.push(dir.normalized(), 1.f);
                 }
+                
+                
             }
 
             //Move tanks according to speed and nudges (see above) also reload
@@ -195,11 +201,13 @@ void Tmpl8::Game::updateTanks()
             //Shoot at closest target if reloaded
             if (tank.rocket_reloaded())
             {
+                
                 Tank& target = find_closest_enemy(tank);
-
+                
                 rockets.push_back(Rocket(tank.position, (target.get_position() - tank.position).normalized() * 3, rocket_radius, tank.allignment, ((tank.allignment == RED) ? &rocket_red : &rocket_blue)));
 
                 tank.reload_rocket();
+                
             }
         }
     }
@@ -241,15 +249,14 @@ Tank& Game::find_closest_enemy(Tank& current_tank)
 // -----------------------------------------------------------
 void Game::update(float deltaTime)
 {
-    updateTanks();
+    gridUpdate();
+    std::thread t1([this] { this->updateTanks(); });
+    t1.join();
     updateRockets();
     updateSmokes();
     updateParticleBeams();
     updateExplosions();
-    for (int i = 0; i < tanks.size(); i++)
-    {
-        tanks_health.at(i) = tanks.at(i).health;
-    }
+    
 }
 
 void Game::draw()
@@ -297,14 +304,10 @@ void Game::draw()
         const int NUM_TANKS = ((t < 1) ? NUM_TANKS_BLUE : NUM_TANKS_RED);
 
         const int begin = ((t < 1) ? 0 : NUM_TANKS_BLUE);
-        std::vector<const Tank*> sorted_tanks;
-        
-        //insertion_sort_tanks_health(tanks, sorted_tanks, begin, begin + NUM_TANKS);
-        
 
         for (int i = 0; i < NUM_TANKS; i++)
         {
-            
+            tanks_health.at(i) = tanks.at(i).health;
             int health_bar_start_x = i * (HEALTH_BAR_WIDTH + HEALTH_BAR_SPACING) + HEALTH_BARS_OFFSET_X;
             int health_bar_start_y = (t < 1) ? 0 : (SCRHEIGHT - HEALTH_BAR_HEIGHT) - 1;
             int health_bar_end_x = health_bar_start_x + HEALTH_BAR_WIDTH;
@@ -317,39 +320,7 @@ void Game::draw()
         
         
     }
-    mergeSort(tanks_health);
-}
-
-// -----------------------------------------------------------
-// Sort tanks by health value using insertion sort
-// -----------------------------------------------------------
-void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end)
-{
-    const int NUM_TANKS = end - begin;
-    sorted_tanks.reserve(NUM_TANKS);
-    sorted_tanks.emplace_back(&original.at(begin));
-
-    for (int i = begin + 1; i < (begin + NUM_TANKS); i++)
-    {
-        const Tank& current_tank = original.at(i);
-
-        for (int s = (int)sorted_tanks.size() - 1; s >= 0; s--)
-        {
-            const Tank* current_checking_tank = sorted_tanks.at(s);
-
-            if ((current_checking_tank->compare_health(current_tank) <= 0))
-            {
-                sorted_tanks.insert(1 + sorted_tanks.begin() + s, &current_tank);
-                break;
-            }
-
-            if (s == 0)
-            {
-                sorted_tanks.insert(sorted_tanks.begin(), &current_tank);
-                break;
-            }
-        }
-    }
+    
 }
 
 void Tmpl8::Game::mergeSort(std::vector<int>& original)
@@ -420,6 +391,22 @@ std::vector<int> Tmpl8::Game::merge(std::vector<int>& left, std::vector<int>& ri
     return results;
 }
 
+void Tmpl8::Grid::add(Tank* tank)
+{
+    //determine grid cell index
+    int cellX = (int)(tank->x_ / Grid::CELL_SIZE);
+    int cellY = (int)(tank->y_ / Grid::CELL_SIZE);
+
+    tank->prev_ = NULL;
+    tank->next_ = cells_[cellX][cellY];
+    cells_[cellX][cellY] = tank;
+
+    if (tank->next_ != NULL)
+    {
+        tank->next_->prev_ = tank;
+    }
+}
+
 // -----------------------------------------------------------
 // When we reach MAX_FRAMES print the duration and speedup multiplier
 // Updating REF_PERFORMANCE at the top of this file with the value
@@ -457,6 +444,7 @@ void Tmpl8::Game::measure_performance()
 // -----------------------------------------------------------
 void Game::tick(float deltaTime)
 {
+    
     if (!lock_update)
     {
         update(deltaTime);
