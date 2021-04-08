@@ -19,7 +19,6 @@ class Game
     void tick(float deltaTime);    
     void mergeSort(std::vector<int>& original);
     std::vector<int> merge(std::vector<int>& left, std::vector<int>& right);
-    void gridUpdate();
     void measure_performance();
     void updateTanks();
     void updateExplosions();
