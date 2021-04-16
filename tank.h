@@ -54,14 +54,14 @@ class Tank
     int current_frame;
     Sprite* tank_sprite;
     Sprite* smoke_sprite;
-    Tank* prev_;
-    Tank* next_;
-    Grid* grid_;
+    
     float x_;
     float y_;
 private:
    
-    
+    Tank* prev_;
+    Tank* next_;
+    Grid* grid_;
 };
 
 } // namespace Tmpl8

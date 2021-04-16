@@ -36,7 +36,7 @@ namespace Tmpl8
         next_(NULL),
         grid_(grid)
     {
-        grid_->add(this);
+       
     }
 
     Tank::~Tank()
@@ -50,7 +50,7 @@ namespace Tmpl8
         //Update using accumulated force
         speed = direction + force;
         position += speed * max_speed * 0.5f;
-        move(position.x, position.y);
+        
         //Update reload time
         if (--reload_time <= 0.0f)
         {
@@ -60,7 +60,7 @@ namespace Tmpl8
         force = vec2(0.f, 0.f);
 
         if (++current_frame > 8) current_frame = 0;
-        
+        move(position.x, position.y);
     }
 
     //Start reloading timer
@@ -108,6 +108,7 @@ namespace Tmpl8
     }
     void Tank::move(float x, float y)
     {
+
         grid_->move(this, x, y);
     }
 } // namespace Tmpl8

@@ -88,6 +88,9 @@ void Game::init()
     {
         tanks_health.push_back(tanks.at(i).health);
         
+            grid->init(&tanks.at(i));
+            grid->add(&tanks.at(i));
+        
     }
     mergeSort(tanks_health);
     particle_beams.push_back(Particle_beam(vec2(SCRWIDTH / 2, SCRHEIGHT / 2), vec2(100, 50), &particle_beam_sprite, PARTICLE_BEAM_HIT_VALUE));
@@ -198,7 +201,7 @@ void Tmpl8::Game::updateTanks()
                 
             }*/
             //Move tanks according to speed and nudges (see above) also reload
-            grid->handleCollision();
+           
            
             tank.tick();
             
@@ -215,6 +218,7 @@ void Tmpl8::Game::updateTanks()
             }
         }
     }
+    
 
 
 }
@@ -253,13 +257,12 @@ Tank& Game::find_closest_enemy(Tank& current_tank)
 // -----------------------------------------------------------
 void Game::update(float deltaTime)
 {
-    std::thread t1([this] { this->updateTanks(); });
-    t1.join();
+    updateTanks();
     updateRockets();
     updateSmokes();
     updateParticleBeams();
     updateExplosions();
-    
+    grid->handleCollision();
 }
 
 void Game::draw()
@@ -393,20 +396,37 @@ std::vector<int> Tmpl8::Game::merge(std::vector<int>& left, std::vector<int>& ri
    
     return results;
 }
-
+void Tmpl8::Grid::init(Tank* tank)
+{
+    int cellX = (int)(tank->x_ / Grid::CELL_SIZE);
+    int cellY = (int)(tank->y_ / Grid::CELL_SIZE);
+    
+    if (cellX < 51 && cellY < 51)
+    {
+        cells_[cellX][cellY] = tank;
+        Tank* temp = cells_[cellX][cellY];
+    }
+    else
+    {
+        return;
+    }
+}
 void Tmpl8::Grid::add(Tank* tank)
 {
-    //determine grid cell index
-    int cellX = (int)(tank->position.x / Grid::CELL_SIZE);
-    int cellY = (int)(tank->position.y / Grid::CELL_SIZE);
-
-    tank->prev_ = NULL;
-    tank->next_ = cells_[cellX][cellY];
-    cells_[cellX][cellY] = tank;
-
-    if (tank->next_ != NULL)
+    // Determine which grid cell it's in.
+    int cellX = (int)(tank->x_ / Grid::CELL_SIZE);
+    int cellY = (int)(tank->y_ / Grid::CELL_SIZE);
+    Tank* temp = cells_[cellX][cellY];
+    // Add to the front of list for the cell it's in.
+    if (cellX < 51 && cellY < 51)
     {
-        tank->next_->prev_ = tank;
+        tank->prev_ = NULL;
+        tank->next_ = cells_[cellX][cellY];
+
+        if (tank->next_ != NULL)
+        {
+            tank->next_->prev_ = tank;
+        }
     }
 }
 
@@ -418,8 +438,8 @@ void Tmpl8::Grid::move(Tank* tank, double x, double y)
     int cellX = (int)(x / Grid::CELL_SIZE);
     int cellY = (int)(y / Grid::CELL_SIZE);
     
-    tank->position.x = x;
-    tank->position.y = y;
+    tank->x_ = x;
+    tank->y_ = y;
 
     if (oldCellX == cellX && oldCellY == cellY)
     {
@@ -444,38 +464,7 @@ void Tmpl8::Grid::handleTank(Tank* tank, Tank* other)
 {
     while (other != NULL)
     {
-        if (tank->active)
-        {
-            vec2 dir = tank->get_position() - other->get_position();
-           
-            tank->push(dir.normalized(), 1.f);
-        }
-       
-        other->next_;
-    }
-    
-
-}
-
-
-void Tmpl8::Grid::handleCollision()
-{
-    for (size_t x = 0; x < NUM_CELLS; x++)
-    {
-        for (size_t y = 0; y < NUM_CELLS; y++)
-        {
-            handleCell(cells_[x][y]);
-        }
-    }
-}
-
-void Tmpl8::Grid::handleCell(Tank* tank)
-{
-    while (tank != NULL && tank->active)
-    {
-        Tank* other = tank->next_;
-        while (other != NULL && other->active)
-        {
+            
             vec2 dir = tank->get_position() - other->get_position();
             float dir_squared_len = dir.sqr_length();
 
@@ -487,6 +476,39 @@ void Tmpl8::Grid::handleCell(Tank* tank)
             {
                 tank->push(dir.normalized(), 1.f);
             }
+        
+       
+        other = other->next_;
+    }
+    
+
+}
+
+
+void Tmpl8::Grid::handleCollision()
+{
+    for (int x = 0; x < NUM_CELLS; x++)
+    {
+        for (int y = 0; y < NUM_CELLS; y++)
+        {
+            if (cells_[x][y] != NULL)
+            {
+                handleCell(cells_[x][y]);
+
+            }
+        }
+    }
+}
+
+void Tmpl8::Grid::handleCell(Tank* tank)
+{
+    while (tank != NULL && tank->active)
+    {
+        Tank* other = tank->next_;
+        while (other != NULL && other->active)
+        {
+
+            handleTank(tank, other);
                
             other = other->next_;
         }
