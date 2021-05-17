@@ -18,13 +18,11 @@ class Tank
       ~Tank();
 
     void tick();
-
+    
     vec2 get_position() const { return position; };
     float get_collision_radius() const { return collision_radius; };
     bool rocket_reloaded() const { return reloaded; };
-
     void reload_rocket();
-    void move(float x, float y);
     void deactivate();
     bool hit(int hit_value);
 
@@ -33,6 +31,10 @@ class Tank
     int compare_health(const Tank& other) const;
 
     void push(vec2 direction, float magnitude);
+
+    void checkCell(float x, float y);
+
+    void getNeighbouringCells(Tank* tank);
 
     vec2 position;
     vec2 speed;
@@ -54,14 +56,11 @@ class Tank
     int current_frame;
     Sprite* tank_sprite;
     Sprite* smoke_sprite;
-    
-    float x_;
-    float y_;
-private:
+    vector<Tank*> neighbours;
    
-    Tank* prev_;
-    Tank* next_;
+private:
     Grid* grid_;
+    
 };
 
 } // namespace Tmpl8

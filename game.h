@@ -13,18 +13,22 @@ class Game
   public:
     void set_target(Surface* surface) { screen = surface; }
     void init();
+
     void shutdown();
     void update(float deltaTime);
     void draw();
     void tick(float deltaTime);    
     void mergeSort(std::vector<int>& original);
     std::vector<int> merge(std::vector<int>& left, std::vector<int>& right);
+    void handleCollision(vector<Tank*> neighbours, Tank* tank);
+    void updateGrid();
     void measure_performance();
     void updateTanks();
     void updateExplosions();
     void updateSmokes();
     void updateRockets();
     void updateParticleBeams();
+   
 
     Tank& find_closest_enemy(Tank& current_tank);
 
@@ -52,12 +56,14 @@ class Game
     Surface* screen;
 
     vector<Tank> tanks;
+    vector<Tank> red_tanks;
+    vector<Tank> blue_tanks;
     vector<int> tanks_health;
     vector<Rocket> rockets;
     vector<Smoke> smokes;
     vector<Explosion> explosions;
     vector<Particle_beam> particle_beams;
-
+    vector<Tank*> ts;
     Font* frame_count_font;
     long long frame_count = 0;
 

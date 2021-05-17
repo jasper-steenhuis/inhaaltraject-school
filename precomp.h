@@ -77,13 +77,12 @@ using namespace std;
 using namespace Tmpl8;
 
 #include "thread_pool.h"
-#include "Grid.h"
 #include "tank.h"
 #include "rocket.h"
 #include "smoke.h"
 #include "explosion.h"
 #include "particle_beam.h"
-
+#include "Grid.h"
 #include "game.h"
 
 // clang-format on

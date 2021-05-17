@@ -15,7 +15,9 @@ namespace Tmpl8
         float collision_radius,
         int health,
         float max_speed,
-        Grid* grid)
+        Grid* grid
+    )
+
         : position(pos_x, pos_y),
         allignment(allignment),
         target(tar_x, tar_y),
@@ -30,13 +32,11 @@ namespace Tmpl8
         current_frame(0),
         tank_sprite(tank_sprite),
         smoke_sprite(smoke_sprite),
-        x_(pos_x),
-        y_(pos_y),
-        prev_(NULL),
-        next_(NULL),
         grid_(grid)
+        
+    
     {
-       
+      
     }
 
     Tank::~Tank()
@@ -45,23 +45,27 @@ namespace Tmpl8
 
     void Tank::tick()
     {
+        
+        
         vec2 direction = (target - position).normalized();
-
+       
         //Update using accumulated force
         speed = direction + force;
         position += speed * max_speed * 0.5f;
-        
+        //updateCell(position.x, position.y, this);
         //Update reload time
         if (--reload_time <= 0.0f)
         {
             reloaded = true;
         }
-
+        
         force = vec2(0.f, 0.f);
 
         if (++current_frame > 8) current_frame = 0;
-        move(position.x, position.y);
+        
     }
+
+    
 
     //Start reloading timer
     void Tank::reload_rocket()
@@ -106,9 +110,11 @@ namespace Tmpl8
     {
         force += direction * magnitude;
     }
-    void Tank::move(float x, float y)
-    {
 
-        grid_->move(this, x, y);
+    void Tank::checkCell(float x, float y)
+    {
+       
     }
+    
+   
 } // namespace Tmpl8
