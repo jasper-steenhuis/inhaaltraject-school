@@ -16,6 +16,7 @@ namespace Tmpl8
         int health,
         float max_speed,
         Grid* grid
+       
     )
 
         : position(pos_x, pos_y),
@@ -32,11 +33,15 @@ namespace Tmpl8
         current_frame(0),
         tank_sprite(tank_sprite),
         smoke_sprite(smoke_sprite),
-        grid_(grid)
+        grid_(grid),
+        x_(pos_x),
+        y_(pos_y),
+        prev_(NULL),
+        next_(NULL)
+      
         
     
-    {
-      
+    {   
     }
 
     Tank::~Tank()
@@ -45,7 +50,7 @@ namespace Tmpl8
 
     void Tank::tick()
     {
-        
+        moveCell(position.x, position.y);
         
         vec2 direction = (target - position).normalized();
        
@@ -111,10 +116,9 @@ namespace Tmpl8
         force += direction * magnitude;
     }
 
-    void Tank::checkCell(float x, float y)
+    void Tank::moveCell(float x, float y)
     {
-       
+        grid_->moveCell(this, x, y);
     }
-    
    
 } // namespace Tmpl8

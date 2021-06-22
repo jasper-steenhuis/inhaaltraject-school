@@ -20,8 +20,7 @@ class Game
     void tick(float deltaTime);    
     void mergeSort(std::vector<int>& original);
     std::vector<int> merge(std::vector<int>& left, std::vector<int>& right);
-    void handleCollision(vector<Tank*> neighbours, Tank* tank);
-    void updateGrid();
+    
     void measure_performance();
     void updateTanks();
     void updateExplosions();
@@ -29,7 +28,7 @@ class Game
     void updateRockets();
     void updateParticleBeams();
    
-
+    void handleCollision(Tank* tank, Tank* other);
     Tank& find_closest_enemy(Tank& current_tank);
 
     void mouse_up(int button)

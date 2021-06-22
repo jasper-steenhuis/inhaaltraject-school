@@ -46,8 +46,9 @@ const static vec2 rocket_size(25, 24);
 const static float tank_radius = 8.5f;
 const static float rocket_radius = 10.f;
 std::mutex m;
-Grid* grid = new Grid();
-vector<Tank*> tankVec;
+Grid* grid = new Grid;
+//vector<Tank*> tankVec;
+
 unsigned int trds = std::thread::hardware_concurrency();
 ThreadPool pool(trds);
 std::vector<std::future<void>> futs;
@@ -57,7 +58,7 @@ std::vector<std::future<void>> futs;
 void Game::init()
 {
     frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
-
+   
     tanks.reserve(NUM_TANKS_BLUE + NUM_TANKS_RED);
     red_tanks.reserve(NUM_TANKS_RED);
     blue_tanks.reserve(NUM_TANKS_BLUE);
@@ -77,20 +78,17 @@ void Game::init()
     float spacing = 15.0f;
 
     
-    thread t1([&] 
-    {
+
         for (int i = 0; i < NUM_TANKS_BLUE; i++)
         {
-            tanks.push_back(Tank(start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing), BLUE, &tank_blue, &smoke, 1200, 600, tank_radius, TANK_MAX_HEALTH, TANK_MAX_SPEED, grid));
-        
+            tanks.push_back(Tank(start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing), BLUE, &tank_blue, &smoke, 1200, 600, tank_radius, TANK_MAX_HEALTH, TANK_MAX_SPEED,grid));
+            
         }
         
-     });
+
     //Spawn blue tanks
    
     //Spawn red tanks
-    
-    thread t2([&] {
         
         for (int i = 0; i < NUM_TANKS_RED; i++)
         {
@@ -102,15 +100,16 @@ void Game::init()
 
         }
         
-        });
-    t2.join();
-    t1.join();
-    
     
     for (int i = 0; i < tanks.size(); i++)
     {
         tanks_health.push_back(tanks.at(i).health); 
+        
         ts.push_back(&tanks.at(i));
+        if (tanks.at(i).active)
+        {
+            grid->add(&tanks.at(i));
+        }
         
     }
     
@@ -201,32 +200,18 @@ void Tmpl8::Game::updateParticleBeams()
 }
 void Tmpl8::Game::updateTanks()
 {
-    std::thread t([&] { updateGrid(); });
-   
-     t.join();
-
- 
-
     for (int i = 0; i < tanks.size(); i++)
     {
        
         if (tanks.at(i).active)
-        {
-           
-            //Check tank collision and nudge tanks away from each other
-            tanks.at(i).getNeighbouringCells(&tanks.at(i));
-            handleCollision(tanks.at(i).neighbours, &tanks.at(i));
+        {        
+            //Check tank collision and nudge tanks away from each other         
             //Move tanks according to speed and nudges (see above) also reload
-           
-           
-            tanks.at(i).tick();
-            
+            tanks.at(i).tick();      
             //Shoot at closest target if reloaded
             if (tanks.at(i).rocket_reloaded())
-            {
-                
-                Tank& target = find_closest_enemy(tanks.at(i));
-                
+            {                
+                Tank& target = find_closest_enemy(tanks.at(i));             
                 rockets.push_back(Rocket(tanks.at(i).position, (target.get_position() - tanks.at(i).position).normalized() * 3, rocket_radius, tanks.at(i).allignment, ((tanks.at(i).allignment == RED) ? &rocket_red : &rocket_blue)));
 
                 tanks.at(i).reload_rocket();
@@ -235,11 +220,9 @@ void Tmpl8::Game::updateTanks()
         }
       
     }
-   
-    grid->cells.clear();
     
-
-
+   
+    
 }
 
 
@@ -290,7 +273,7 @@ void Game::update(float deltaTime)
     {
         fut.wait();
     }
-
+    grid->handleTanks();
 }
 
 void Game::draw()
@@ -424,100 +407,6 @@ std::vector<int> Tmpl8::Game::merge(std::vector<int>& left, std::vector<int>& ri
    
     return results;
 }
-void Grid::add(vector<Tank> tanks)
-{
-    for (int x = 0; x < grid->NUM_CELLS; x++)
-    {
-        grid->cells.push_back(tankVec);
-
-        for (int y = 0; y < grid->NUM_CELLS; y++)
-        {
-            grid->cells[x].push_back(&tanks.at(y));;
-        }
-
-    }
-   
-}
-void Game::handleCollision(vector<Tank*> neighbours, Tank* tank)
-{
-        if (tank->active)
-        {
-            for (Tank* o_tank : neighbours)
-            {
-                if (o_tank->active)
-                {
-                    if (tank == o_tank) continue;
-
-                    vec2 dir = tank->get_position() - o_tank->get_position();
-                    float dir_squared_len = dir.sqr_length();
-
-                    float col_squared_len = (tank->get_collision_radius() + o_tank->get_collision_radius());
-                    col_squared_len *= col_squared_len;
-
-                    if (dir_squared_len <= col_squared_len)
-                    {
-                        tank->push(dir.normalized(), 1.f);
-                    }
-                }
-
-            }
-
-        }
-        neighbours.clear();
-
-}
-
-void Tmpl8::Game::updateGrid()
-{
-    std::lock_guard<std::mutex> lockguard(m);
-    int counter = -1;
-    for (int x = 0; x < 50;)
-    {
-        grid->cells.push_back(tankVec);
-        for (int y = 0; y < tanks.size(); y++)
-        {
-            if (counter < 51)
-            {
-                counter++;
-            }
-            if (counter == 51)
-            {
-                x++;
-                grid->cells.push_back(tankVec);
-                counter = -1;
-            }
-
-            grid->cells[x].push_back(&tanks.at(y));
-        }
-    }
-    
-}
-
-void Tank::getNeighbouringCells(Tank* tank)
-{
-    int cellX = (int)(tank->position.x / grid->CELL_SIZE);
-    int cellY = (int)(tank->position.y / grid->CELL_SIZE);
-
-    //Tank* temp = grid->cells[cellX][cellY];
-
-    if (cellX < 50 && cellY < 50 && cellX > 0 && cellY > 0)
-    {
-        tank->neighbours.push_back(grid->cells[cellX - 1][cellY - 1]);
-        tank->neighbours.push_back(grid->cells[cellX + 1][cellY + 1]);
-        tank->neighbours.push_back(grid->cells[cellX][cellY - 1]);
-        tank->neighbours.push_back(grid->cells[cellX][cellY + 1]);
-        tank->neighbours.push_back(grid->cells[cellX - 1][cellY]);
-        tank->neighbours.push_back(grid->cells[cellX + 1][cellY]);
-        tank->neighbours.push_back(grid->cells[cellX - 1][cellY + 1]);
-        tank->neighbours.push_back(grid->cells[cellX + 1][cellY - 1]);
-    
-    }
-}
-
-
-
-
-
 
 
 // -----------------------------------------------------------

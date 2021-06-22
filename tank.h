@@ -14,7 +14,7 @@ class Tank
 {
     friend class Grid;
   public:
-      Tank(float pos_x, float pos_y, allignments allignment, Sprite* tank_sprite, Sprite* smoke_sprite, float tar_x, float tar_y, float collision_radius, int health, float max_speed, Grid* grid);
+      Tank(float pos_x, float pos_y, allignments allignment, Sprite* tank_sprite, Sprite* smoke_sprite, float tar_x, float tar_y, float collision_radius, int health, float max_speed,Grid* grid);
       ~Tank();
 
     void tick();
@@ -24,6 +24,7 @@ class Tank
     bool rocket_reloaded() const { return reloaded; };
     void reload_rocket();
     void deactivate();
+    void moveCell(float x, float y);
     bool hit(int hit_value);
 
     void draw(Surface* screen);
@@ -31,10 +32,6 @@ class Tank
     int compare_health(const Tank& other) const;
 
     void push(vec2 direction, float magnitude);
-
-    void checkCell(float x, float y);
-
-    void getNeighbouringCells(Tank* tank);
 
     vec2 position;
     vec2 speed;
@@ -56,10 +53,13 @@ class Tank
     int current_frame;
     Sprite* tank_sprite;
     Sprite* smoke_sprite;
-    vector<Tank*> neighbours;
    
 private:
+    float x_, y_;
     Grid* grid_;
+
+    Tank* prev_;
+    Tank* next_;
     
 };
 

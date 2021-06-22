@@ -8,18 +8,28 @@ namespace Tmpl8
 	public:
 		Grid()
 		{
-			cells.clear();
+			for (int x = 0; x < NUM_CELLS; x++)
+			{
+				for (int y = 0; y < NUM_CELLS; y++)
+				{
+					cells_[x][y] = NULL;
+				}
+			}
 			
 		}
-		int NUM_CELLS = 51;
-		vector<vector<Tank*>> cells;
-		void add(vector<Tank> tanks);
-		const float CELL_SIZE =9.5f;
-		
+
+		void add(Tank* tank);
+		void handleTanks();
+		void handleCell(Tank* tank);
+		void handleCell(int x, int y);
+		void handleCollision(Tank* tank, Tank* other);
+		void moveCell(Tank* tank, float x, float y);
+	
+		static const int NUM_CELLS = 51;
+		static const int CELL_SIZE = 25;
 
 	private:
-		
+		Tank* cells_[NUM_CELLS][NUM_CELLS];
 	};
 
 }
-
