@@ -22,7 +22,7 @@ class Game
     std::vector<int> merge(std::vector<int>& left, std::vector<int>& right);
     
     void measure_performance();
-    void updateTanks();
+    void updateTanks(int from, int to);
     void updateExplosions();
     void updateSmokes();
     void updateRockets();

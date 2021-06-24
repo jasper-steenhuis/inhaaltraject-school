@@ -2,37 +2,41 @@
 #include "Grid.h"
 
 
+std::mutex mut;
+
 void Tmpl8::Grid::add(Tank* tank)
 {
 	int cellX = (int)(tank->x_ / CELL_SIZE);
 	int cellY = (int)(tank->y_ / CELL_SIZE);
 
 	tank->prev_ = NULL;
-	if (!cells_[cellX][cellY] == NULL)
+	if (tank->x_ >= 0 && tank->y_ >= 0 && tank->x_ < 9999 && tank->y_ < 9999)
 	{
-		tank->next_ = cells_[cellX][cellY];
-	}
-	cells_[cellX][cellY] = tank;
-
-	if (tank->next_ != NULL)
-	{
-		if (tank->next_->active)
+		if (!cells_[cellX][cellY] == NULL)
 		{
-			tank->next_->prev_ = tank;
+			tank->next_ = cells_[cellX][cellY];
+		}
+		cells_[cellX][cellY] = tank;
 
+		if (tank->next_ != NULL)
+		{
+			if (tank->next_->active)
+			{
+				tank->next_->prev_ = tank;
+			}
 		}
 	}
+	
 }
 
 void Tmpl8::Grid::handleTanks()
 {
-	for (int x = 0; x < NUM_CELLS; x++)
-	{
-		for (int y = 0; y < NUM_CELLS; y++)
+	std::thread t1([&]
 		{
-			handleCell(cells_[x][y]);
-		}
-	}
+			threadFunction();
+		});
+	t1.join();
+	
 }
 
 void Tmpl8::Grid::handleCell(Tank* tank)
@@ -40,9 +44,8 @@ void Tmpl8::Grid::handleCell(Tank* tank)
 	while (tank != NULL && tank ->active)
 	{
 		Tank* other = tank->next_;
-		if (other != NULL && other->active)
+		if(other != NULL && other->active)
 		{
-			
 			handleCell(tank->x_, tank->y_);
 			other = other->next_;
 		}
@@ -52,35 +55,47 @@ void Tmpl8::Grid::handleCell(Tank* tank)
 
 void Tmpl8::Grid::handleCell(int x, int y)
 {
-	Tank* tank = cells_[x][y];
-	while (tank != NULL && tank->active)
+
+	int cellX = (int)(x / CELL_SIZE);
+	int cellY = (int)(y / CELL_SIZE);
+	if (x >= 0 && y >= 0 && x < 9999 && y < 9999)
 	{
-		if (tank->next_ != NULL && tank->next_->active)
+		Tank* tank = cells_[cellX][cellY];
+
+		while (tank != NULL && tank->active)
 		{
-			handleCollision(tank, tank->next_);
-		}
-		if (x > 0 && y > 0)
-		{
-			handleCollision(tank, cells_[x - 1][y - 1]);
-		}
-		if (x > 0)
-		{
-			handleCollision(tank, cells_[x - 1][y]);
-		}
-		if (y > 0)
-		{
-			handleCollision(tank, cells_[x][y - 1]);
-		}
-		if (x > 0 && y < NUM_CELLS - 1)
-		{
-			tank = tank->next_;
+			if (tank->next_ != NULL && tank->next_->active)
+			{
+				
+				handleCollision(tank, tank->next_);
+			}
+			if (cellX > 0 && cellY > 0)
+			{
+				
+				handleCollision(tank, cells_[cellX - 1][cellY - 1]);
+			}
+			if (cellX > 0)
+			{
+				
+				handleCollision(tank, cells_[cellX - 1][cellY]);
+			}
+			if (cellY > 0)
+			{
+				
+				handleCollision(tank, cells_[cellX][cellY - 1]);
+			}
+			if (cellX > 0 && cellY < NUM_CELLS - 1)
+			{
+				std::lock_guard<std::mutex> lock(mut);
+				tank = tank->next_;
+			}
 		}
 	}
 }
 
 void Tmpl8::Grid::handleCollision(Tank* tank, Tank* other)
 {
-	while (other != NULL && other->active)
+	if (other != NULL && other->active)
 	{
 		if (tank == other) return;
 		vec2 dir = tank->get_position() - other->get_position();
@@ -89,7 +104,7 @@ void Tmpl8::Grid::handleCollision(Tank* tank, Tank* other)
 		float col_squared_len = (tank->get_collision_radius() + other->get_collision_radius());
 		col_squared_len *= col_squared_len;
 
-		while (dir_squared_len < col_squared_len)
+		if (dir_squared_len <= col_squared_len)
 		{
 			tank->push(dir.normalized(), 1.f);
 		}
@@ -107,23 +122,48 @@ void Tmpl8::Grid::moveCell(Tank* tank, float x, float y)
 
 	tank->x_ = x;
 	tank->y_ = y;
-
-	if (oldCellX == cellX && oldCellY == cellY) return;
-
-	if (tank->prev_ != NULL)
+	if (x >= 0 && y >= 0 && x < 9999 && y < 9999)
 	{
-		tank->prev_->next_ = tank->next_;
-	}
-	if (tank->next_!= NULL)
-	{
-		tank->next_->prev_ = tank->prev_;
-	}
+		if (oldCellX == cellX && oldCellY == cellY) return;
 
-	if (cells_[oldCellX][oldCellY] == tank)
-	{
-		cells_[oldCellX][oldCellY] = tank->next_;
-	}
+		if (tank->prev_ != NULL)
+		{
+			tank->prev_->next_ = tank->next_;
+		}
+		if (tank->next_ != NULL)
+		{
+			tank->next_->prev_ = tank->prev_;
+		}
 
-	add(tank);
+		if (cells_[oldCellX][oldCellY] != NULL && cells_[oldCellX][oldCellY] == tank)
+		{
+			cells_[oldCellX][oldCellY] = tank->next_;
+		}
+
+		add(tank);
+
+	}
+}
+
+void Tmpl8::Grid::threadFunction()
+{
+	while (true)
+	{
+		run();
+		std::this_thread::sleep_for(chrono::milliseconds(1000));
+	}
+}
+
+void Tmpl8::Grid::run()
+{
+	
+	for (int y = 0; y < NUM_CELLS; y++)
+	{
+		for (int x = 0; x < NUM_CELLS; x++)
+		{
+			handleCell(cells_[y][x]);
+		}
+
+	}
 }
 

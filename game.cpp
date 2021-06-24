@@ -117,6 +117,9 @@ void Game::init()
     particle_beams.push_back(Particle_beam(vec2(SCRWIDTH / 2, SCRHEIGHT / 2), vec2(100, 50), &particle_beam_sprite, PARTICLE_BEAM_HIT_VALUE));
     particle_beams.push_back(Particle_beam(vec2(80, 80), vec2(100, 50), &particle_beam_sprite, PARTICLE_BEAM_HIT_VALUE));
     particle_beams.push_back(Particle_beam(vec2(1200, 600), vec2(100, 50), &particle_beam_sprite, PARTICLE_BEAM_HIT_VALUE));
+
+    
+    
 }
 
 // -----------------------------------------------------------
@@ -198,9 +201,10 @@ void Tmpl8::Game::updateParticleBeams()
         }
     }
 }
-void Tmpl8::Game::updateTanks()
+void Tmpl8::Game::updateTanks(int from, int to)
 {
-    for (int i = 0; i < tanks.size(); i++)
+    std::lock_guard<std::mutex> lock(m);
+    for (int i = from; i < to; i++)
     {
        
         if (tanks.at(i).active)
@@ -261,19 +265,26 @@ Tank& Game::find_closest_enemy(Tank& current_tank)
 // -----------------------------------------------------------
 void Game::update(float deltaTime)
 {
-   
 
-    futs.push_back(pool.enqueue([&]() { updateTanks(); }));
+    std::thread t1([&] { updateTanks(0, 639); });
+    std::thread t2([&] { updateTanks(640, 1279); });
+    std::thread t3([&] { updateTanks(1280, 1919); });
+    std::thread t4([&] { updateTanks(1920, 2558); });
+  
     futs.push_back(pool.enqueue([&]() { updateRockets(); }));
     futs.push_back(pool.enqueue([&]() { updateSmokes(); }));
     futs.push_back(pool.enqueue([&]() { updateParticleBeams(); }));
     futs.push_back(pool.enqueue([&]() { updateExplosions(); }));
-
+    grid->handleTanks();
     for (auto& fut : futs)
     {
+        
         fut.wait();
     }
-    grid->handleTanks();
+    t1.join(); 
+    t2.join(); 
+    t3.join(); 
+    t4.join();
 }
 
 void Game::draw()
@@ -334,7 +345,7 @@ void Game::draw()
             screen->bar(health_bar_start_x, health_bar_start_y + (int)((double)HEALTH_BAR_HEIGHT * (1 - ((double) tanks_health.at(i) / (double)TANK_MAX_HEALTH))), health_bar_end_x, health_bar_end_y, GREENMASK);
             
         }
-        
+     
         
     }
     
