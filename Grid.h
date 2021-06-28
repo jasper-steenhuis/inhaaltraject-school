@@ -24,8 +24,7 @@ namespace Tmpl8
 		void handleCell(int x, int y);
 		void handleCollision(Tank* tank, Tank* other);
 		void moveCell(Tank* tank, float x, float y);
-		void threadFunction();
-		void run();
+		void run(int from, int to);
 		static const int NUM_CELLS = 100;
 		static const int CELL_SIZE = 20;
 

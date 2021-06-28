@@ -209,6 +209,7 @@ void Tmpl8::Game::updateTanks(int from, int to)
        
         if (tanks.at(i).active)
         {        
+           
             //Check tank collision and nudge tanks away from each other         
             //Move tanks according to speed and nudges (see above) also reload
             tanks.at(i).tick();      
@@ -266,25 +267,21 @@ Tank& Game::find_closest_enemy(Tank& current_tank)
 void Game::update(float deltaTime)
 {
 
-    std::thread t1([&] { updateTanks(0, 639); });
-    std::thread t2([&] { updateTanks(640, 1279); });
-    std::thread t3([&] { updateTanks(1280, 1919); });
-    std::thread t4([&] { updateTanks(1920, 2558); });
-  
+    futs.push_back(pool.enqueue([&]() { updateTanks(0, 639); }));
+    futs.push_back(pool.enqueue([&]() { updateTanks(640, 1279); }));
+    futs.push_back(pool.enqueue([&]() { updateTanks(1280, 1919); }));
+    futs.push_back(pool.enqueue([&]() { updateTanks(1920, 2558); }));
+    
     futs.push_back(pool.enqueue([&]() { updateRockets(); }));
     futs.push_back(pool.enqueue([&]() { updateSmokes(); }));
     futs.push_back(pool.enqueue([&]() { updateParticleBeams(); }));
     futs.push_back(pool.enqueue([&]() { updateExplosions(); }));
-    grid->handleTanks();
     for (auto& fut : futs)
     {
         
         fut.wait();
     }
-    t1.join(); 
-    t2.join(); 
-    t3.join(); 
-    t4.join();
+    grid->handleTanks();
 }
 
 void Game::draw()
